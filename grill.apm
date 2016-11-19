@@ -1,0 +1,183 @@
+Constants
+
+		P = 1				! atm
+		pi = 3.14159
+		R = 4.378e-3		! BTU/(mol*ºF)
+		Tref = 100			! ºF
+		T_sp = 700			! ºF
+
+		! Grill metrics
+		V_pot = 0.0818		! ft^3
+
+		! Kinetic data
+		k = 2.033e6			! 1/min
+		Ea = 65.4773		! BTU/mol
+
+		! Molecular weights (lb/mol)
+		mw[1] = 0.0705		! O2
+		mw[2] = 0.0617		! N2
+		mw[3] = 0.0970		! CO2
+		mw[4] = 0.0397		! H2O
+		mw[5] = 1.6887		! Volatiles
+		mw[6] = 1.6887		! Wood (C32H46O21)
+		mw[7] = 0.0636		! Air
+
+		! Heats of formation (BTU/lb)
+		h_f[1] = 0
+		h_f[2] = 0
+		h_f[3] = -3844.964
+		h_f[4] = -5775.724
+		h_f[5] = 2278.5899
+		h_f[6] = -2278.5899
+		h_f[7] = 0
+
+		! Constant heat capacities (BTU/(lb*ºF))
+		Cp[1] = 0.2195		! O2
+		Cp[2] = 0.2484		! N2
+		Cp[3] = 0.2016		! CO2
+		Cp[4] = 0.4705		! H2O
+		Cp[5] = 0.4777		! Volatiles (guess)
+		Cp[6] = 4.2008		! Wood (at 600ºF)
+		Cp[7] = 0.2412		! Air
+
+		! Constant densities (lb/ft^3)
+		rho[1] = 0.0892		! O2
+		rho[2] = 0.0727		! N2
+		rho[3] = 0.1150		! CO2
+		rho[4] = 0.0480		! H2O
+		rho[5] = 0.4777		! Volatiles (guess)
+		rho[6] = 70.757		! Wood
+		rho[7] = 0.0752		! Air
+
+		! Mass flowing into reactor
+		M_in[1] = 0.21		! O2
+		M_in[2] = 0.79		! N2
+		M_in[3] = 0			! CO2
+		M_in[4] = 0			! H2O
+		M_in[5] = 0			! Volatiles (guess)
+		M_in[6] = 4			! Wood (at 600ºF)
+		M_in[7] = 1			! Air (either use this or O2 and N2 above)
+
+		! Stoichiometry
+		x[1] = -31			! O2
+		x[2] = 0			! N2
+		x[3] = 32			! CO2
+		x[4] = 23			! H2O
+		x[5] = 1			! Volatiles
+
+		! Moved from parameters
+		V_air_in = 1		! Change this to correctly be utilized
+		T_amb = 70			! ºF
+		! M_wood_in = 1
+
+End Constants
+Parameters
+
+		M_wood_in = 1
+		!T = 700				! ºF (remove after simulation works)
+
+End Parameters
+Variables
+		! Temperature
+		T = 500, >=100		! ºF (include after simulation works)
+
+		! Mass in the firepot (lb) (initialize to stoich. comb. prod.)
+		M[1] = 0.2			! O2
+		M[2] = 0.2			! N2
+		M[3] = 0.2			! CO2
+		M[4] = 0.2			! H2O
+		M[5] = 0.2			! Volatiles
+		M[6] = 0.2			! Wood (C32H46O21)
+
+		! Enthalpy
+		E = M_gas * (Y[1]*h[1] + Y[2]*h[2] + Y[3]*h[3] + Y[4]*h[4] + Y[5]*h[5]) + M[6]*h[6]
+
+End Variables
+Intermediates
+
+		! Can calculate specific heat capacities here
+
+		! Rates of reaction (lb/min)
+		M_rxn[6] = M[6] * k * exp(-Ea/(R*T)) 		! Wood
+		! From stoichiometry (can combine these if desired)
+		!M_rxn[1] = -M_rxn[6] * 33 * mw[1]/mw[6] 	! O2
+		!M_rxn[2] = 0 								! N2
+		!M_rxn[3] = M_rxn[6] * 32 * mw[3]/mw[6] 		! CO2
+		!M_rxn[4] = M_rxn[6] * 23 * mw[4]/mw[6] 		! H2O
+		!M_rxn[5] = M_rxn[6] 						! Volatiles
+		!M_rxn[7] = 0	 							! Air
+		M_rxn[1:5] = x[1:5] * M_rxn[6] * mw[1:5]/mw[6] ! =0 if Y[1:5] <=0
+
+		! Gas in the firepot
+		M_gas = M[1] + M[2] + M[3] + M[4] + M[5]
+
+		! Gas phase mass fractions in the firepot
+		Y[1] = M[1]/M_gas ! O2
+		Y[2] = M[2]/M_gas ! N2
+		Y[3] = M[3]/M_gas ! CO2
+		Y[4] = M[4]/M_gas ! H2O
+		Y[5] = M[5]/M_gas ! Volatiles
+
+		! Gas in the firepot
+		mw_gas = 1 / (Y[1]/mw[1] + Y[2]/mw[2] + Y[3]/mw[3] + Y[4]/mw[4] + Y[5]/mw[5])
+		rho_gas = mw_gas * P / (R * T)
+		V_gas = V_pot - M[6]/rho[6]
+		!M_gas = rho_gas * V_gas ! defined above
+
+		! Enthalpies (BTU/lb)
+		!h[1] = Y[1] * (h_f[1] + Cp[1] * (T - Tref)) ! O2
+		!h[2] = Y[2] * (h_f[2] + Cp[2] * (T - Tref)) ! N2
+		!h[3] = Y[3] * (h_f[3] + Cp[3] * (T - Tref)) ! CO2
+		!h[4] = Y[4] * (h_f[4] + Cp[4] * (T - Tref)) ! H2O
+		!h[5] = Y[5] * (h_f[5] + Cp[5] * (T - Tref)) ! Volatiles
+		!h[6] = Y[6] * (h_f[6] + Cp[6] * (T - Tref)) ! Wood (C32H46O21)
+		h[6] = h_f[6] + Cp[6] * (T - Tref)  ! Enthalpy of wood
+		! h[1:5] = Y[1:5] * (h_f[1:5] + Cp[1:5] * (T - Tref)) ! Enthalpy of gas streams
+		h[1:5] = Y[1:5] * ((h_f[1:5]) + (Cp[1:5] * (T - Tref)))
+		h_out = h[1] + h[2] + h[3] + h[4] + h[5] ! Assume well-mixed
+		! MKA --- 11/18/16 --- Cannot multiply heat of formations by Delta T, need to separate
+		! h_in = (h_f[7]+Cp[7] + h_f[6]+Cp[6]) * (T_amb - Tref) ! Air and wood in, assumed to be at T_amb
+		h_in = (h_f[7] + h_f[6]) + (Cp[7] + Cp[6]) * (T_amb - Tref)
+
+		! Gas in the firepot
+		h_gas = h[1] + h[2] + h[3] + h[4] + h[5]
+
+		E_gas = h[1]*M[1] + h[2]*M[2] + h[3]*M[3] + h[4]*M[4] + h[5]*M[5]
+		E_wood = h[6]*M[6]
+
+		! Gas flow rate out
+		! M_gas_out = M_gas_in + M_wood_rxn
+		M_out = M_in[7] + M_rxn[6]
+
+		! Enthalpy
+		h_tot = h_gas + h[6]
+		M_tot = M[1] + M[2] + M[3] + M[4] + M[5] + M[6]
+		!H = h_tot * M_tot	! Think about this more. Include the air in? (defined above)
+
+		M_in_tot = M_in[6] + M_in[7]
+		! MKA --- 11/18/16 --- Cannot multiply heat of formations by Delta T, need to separate
+		!h_in_tot = (h_f[6]+Cp[6] + h_f[7]+Cp[7]) * (T_amb - Tref) ! Wood and air in (assuming same T)
+		h_in_tot = (h_f[6] + h_f[7]) + (Cp[6] + Cp[7])*(T_amb-Tref)
+
+
+End Intermediates
+Equations
+		! Mass Balances
+		!$M[1] = M_gas_in * Y_O2_in - M_gas_out * Y_O2 + M_O2_rxn
+		!$M[2] = M_gas_in * Y_N2_in - M_gas_out * Y_N2 + M_N2_rxn
+		!$M[3] = M_gas_in * Y_CO2_in - M_gas_out * Y_CO2 + M_CO2_rxn
+		!$M[4] = M_gas_in * Y_H2O_in - M_gas_out * Y_H2O + M_H2O_rxn
+		!$M[5] = M_gas_in * Y_vol_in - M_gas_out * Y_vol + M_wood_rxn # vol = volatiles (gaseous wood)
+		$M[1:5] = M_in[1:5] - M_out*Y[1:5] + M_rxn[1:5] ! Gases
+		$M[6] = M_in[6] - M_rxn[6]  ! Wood
+
+		! Enthalpy Balances
+		! $E = M_in_tot * h_in_tot - M_out - h_out ! Need to finish defining these variables up above.
+		! MKA --- 11/19/16 --- Should be (M_out * h_out) not (M_out - h_out)
+		$E = M_in_tot * h_in_tot - M_out * h_out
+
+		! Optimization
+		! MKA --- 11/18/16 --- Changed objective function to minimize SSE
+		! minimize (T - T_sp)^2
+
+End Equations
